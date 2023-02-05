@@ -2,8 +2,6 @@ package test
 
 import (
 	"context"
-	"fmt"
-	"io/ioutil"
 	"net/http"
 	"testing"
 	"time"
@@ -48,7 +46,6 @@ func Test(t *testing.T) {
 	defer cancel()
 	mockServer := example.New(context.Background())
 	mockServer.StartRunning(context.Background())
-	mockServer.SetConfig(ctx, config)
 
 	req, err := http.NewRequest("GET", "xds://test/todos/1", nil)
 	if err != nil {
@@ -68,8 +65,14 @@ func Test(t *testing.T) {
 	if err != nil {
 		panic(err.Error())
 	}
+	assert.Equal(t, 404, resp.StatusCode)
+
+	mockServer.SetConfig(ctx, config)
+	time.Sleep(1 * time.Second)
+	resp, err = client.Do(req)
+	if err != nil {
+		panic(err.Error())
+	}
 	assert.Equal(t, 200, resp.StatusCode)
-	fmt.Printf("%v\n", resp)
-	body, _ := ioutil.ReadAll(resp.Body)
-	fmt.Printf("%v\n", string(body))
+
 }
