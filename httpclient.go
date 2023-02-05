@@ -6,6 +6,8 @@ import (
 
 	"github.com/k3rn3l-p4n1c/gohttpxds/internal/xdscache"
 	"github.com/k3rn3l-p4n1c/gohttpxds/internal/xdsclient"
+	"github.com/k3rn3l-p4n1c/gohttpxds/transport"
+
 	"google.golang.org/grpc"
 )
 
@@ -26,5 +28,5 @@ func NewHttpClient(ServerURI string, Creds grpc.DialOption, nodeId string) (*htt
 	xdsCache := xdscache.New(xdsClient)
 	xdsCache.WatchCluster("")
 	xdsCache.WatchListener("")
-	return &http.Client{Transport: &TransportWrapper{Transport: http.DefaultTransport, cache: xdsCache}}, nil
+	return &http.Client{Transport: transport.New(http.DefaultTransport, xdsCache)}, nil
 }
