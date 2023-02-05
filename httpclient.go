@@ -6,8 +6,19 @@ import (
 
 	"github.com/k3rn3l-p4n1c/gohttpxds/internal/xdscache"
 	"github.com/k3rn3l-p4n1c/gohttpxds/internal/xdsclient"
+
+	"github.com/k3rn3l-p4n1c/gohttpxds/transport"
 	"google.golang.org/grpc"
 )
+
+func Register(serverURI string, creds grpc.DialOption) {
+	httpXdsClient, err := NewHttpClient(serverURI, creds)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	http.DefaultClient = httpXdsClient
+}
 
 func NewHttpClient(ServerURI string, Creds grpc.DialOption) (*http.Client, error) {
 	xdsClient, err := xdsclient.New(xdsclient.ServerConfig{ServerURI: ServerURI, Creds: Creds})
@@ -17,5 +28,5 @@ func NewHttpClient(ServerURI string, Creds grpc.DialOption) (*http.Client, error
 	xdsCache := xdscache.New(xdsClient)
 	xdsCache.WatchCluster("")
 	xdsCache.WatchListener("")
-	return &http.Client{Transport: &TransportWrapper{Transport: http.DefaultTransport, cache: xdsCache}}, nil
+	return &http.Client{Transport: transport.New(http.DefaultTransport, xdsCache)}, nil
 }

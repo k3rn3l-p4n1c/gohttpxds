@@ -3,7 +3,6 @@ package xdsclient
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 
 	xdsCore "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -13,6 +12,7 @@ import (
 	rds "github.com/envoyproxy/go-control-plane/envoy/service/route/v3"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/any"
+	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
@@ -29,15 +29,15 @@ func New(config ServerConfig) (XDSClient, error) {
 	}
 
 	return &clientImpl{
-		conn:            conn,
-		serverConfig:    config,
-		done:            &event.Event{},
-		rdsClient:       rds.NewRouteDiscoveryServiceClient(conn),
-		ldsClient:       lds.NewListenerDiscoveryServiceClient(conn),
-		cdsClient:       cds.NewClusterDiscoveryServiceClient(conn),
-		listernersNames: make(map[string]struct{}),
-		clustersNames:   make(map[string]struct{}),
-		routesNames:     make(map[string]struct{}),
+		conn:           conn,
+		serverConfig:   config,
+		done:           &event.Event{},
+		rdsClient:      rds.NewRouteDiscoveryServiceClient(conn),
+		ldsClient:      lds.NewListenerDiscoveryServiceClient(conn),
+		cdsClient:      cds.NewClusterDiscoveryServiceClient(conn),
+		listenersNames: make(map[string]struct{}),
+		clustersNames:  make(map[string]struct{}),
+		routesNames:    make(map[string]struct{}),
 	}, nil
 }
 
@@ -50,24 +50,24 @@ type clientImpl struct {
 	ldsClient     lds.ListenerDiscoveryServiceClient
 	cdsClient     cds.ClusterDiscoveryServiceClient
 
-	listernersNames map[string]struct{}
-	clustersNames   map[string]struct{}
-	routesNames     map[string]struct{}
+	listenersNames map[string]struct{}
+	clustersNames  map[string]struct{}
+	routesNames    map[string]struct{}
 }
 
 func (c *clientImpl) addListener(resourceName string) {
 	if resourceName == "" {
 		return
 	}
-	_, exists := c.listernersNames[resourceName]
+	_, exists := c.listenersNames[resourceName]
 	if !exists {
-		c.listernersNames[resourceName] = struct{}{}
+		c.listenersNames[resourceName] = struct{}{}
 	}
 }
 
 func (c *clientImpl) GetListeners() []string {
-	listeners := make([]string, 0, len(c.listernersNames))
-	for k := range c.listernersNames {
+	listeners := make([]string, 0, len(c.listenersNames))
+	for k := range c.listenersNames {
 		listeners = append(listeners, k)
 	}
 	return listeners
@@ -202,12 +202,17 @@ func watchResources(getResourceNames func() []string, sc streamClient, callback 
 				VersionInfo:   "2",
 			}
 			sc.Send(req)
+			fmt.Println("### fuck")
 			resp, err := sc.Recv()
-			if err != nil {
-				callback(nil, err)
-				continue
-			}
 
+			fmt.Println("####", err.Error())
+			if err != nil {
+				fmt.Println(err.Error())
+				log.Debug().Err(err).Msg("error in recv")
+				callback(nil, err)
+				//continue
+			}
+			fmt.Println("###", len(resp.GetResources()))
 			callback(resp.GetResources(), nil)
 		}
 	}()
