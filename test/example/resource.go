@@ -33,30 +33,71 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 )
 
-const (
-	ClusterName  = "example_proxy_cluster"
-	RouteName    = "local_route"
-	ListenerName = "listener_0"
-	ListenerPort = 10000
-	UpstreamHost = "jsonplaceholder.typicode.com"
-	UpstreamPort = 80
-)
+// const (
+// 	ClusterName  = "example_proxy_cluster"
+// 	RouteName    = "local_route"
+// 	ListenerName = "listener_0"
+// 	ListenerPort = 10000
+// 	UpstreamHost = "jsonplaceholder.typicode.com"
+// 	UpstreamPort = 80
+// )
 
-func makeCluster(clusterName string) *cluster.Cluster {
+type Config struct {
+	Listeners []Listener
+}
+
+type Listener struct {
+	Name        string
+	Address     string
+	Port        uint32
+	RouteConfig RouteConfig
+}
+
+type RouteConfig struct {
+	Name         string
+	VirtualHosts []VirtualHost
+}
+
+type VirtualHost struct {
+	Name    string
+	Domains []string
+	Routes  []Route
+}
+
+type Route struct {
+	Name    string
+	Prefix  string
+	Cluster Cluster
+}
+
+type Cluster struct {
+	Name      string
+	Endpoints []Endpoint
+}
+
+type Endpoint struct {
+	UpstreamHost string
+	UpstreamPort uint32
+}
+
+func makeCluster(c Cluster) *cluster.Cluster {
 	return &cluster.Cluster{
-		Name:                 clusterName,
+		Name:                 c.Name,
 		ConnectTimeout:       durationpb.New(5 * time.Second),
 		ClusterDiscoveryType: &cluster.Cluster_Type{Type: cluster.Cluster_LOGICAL_DNS},
 		LbPolicy:             cluster.Cluster_ROUND_ROBIN,
-		LoadAssignment:       makeEndpoint(clusterName),
-		DnsLookupFamily:      cluster.Cluster_V4_ONLY,
+		LoadAssignment: &endpoint.ClusterLoadAssignment{
+			ClusterName: c.Name,
+			Endpoints:   makeEndpoint(c.Endpoints),
+		},
+		DnsLookupFamily: cluster.Cluster_V4_ONLY,
 	}
 }
 
-func makeEndpoint(clusterName string) *endpoint.ClusterLoadAssignment {
-	return &endpoint.ClusterLoadAssignment{
-		ClusterName: clusterName,
-		Endpoints: []*endpoint.LocalityLbEndpoints{{
+func makeEndpoint(endpoints []Endpoint) []*endpoint.LocalityLbEndpoints {
+	var result []*endpoint.LocalityLbEndpoints
+	for _, e := range endpoints {
+		result = append(result, &endpoint.LocalityLbEndpoints{
 			LbEndpoints: []*endpoint.LbEndpoint{{
 				HostIdentifier: &endpoint.LbEndpoint_Endpoint{
 					Endpoint: &endpoint.Endpoint{
@@ -64,9 +105,9 @@ func makeEndpoint(clusterName string) *endpoint.ClusterLoadAssignment {
 							Address: &core.Address_SocketAddress{
 								SocketAddress: &core.SocketAddress{
 									Protocol: core.SocketAddress_TCP,
-									Address:  UpstreamHost,
+									Address:  e.UpstreamHost,
 									PortSpecifier: &core.SocketAddress_PortValue{
-										PortValue: UpstreamPort,
+										PortValue: e.UpstreamPort,
 									},
 								},
 							},
@@ -74,38 +115,57 @@ func makeEndpoint(clusterName string) *endpoint.ClusterLoadAssignment {
 					},
 				},
 			}},
-		}},
+		})
 	}
+	return result
 }
 
-func makeRoute(routeName string, clusterName string) *route.RouteConfiguration {
+func makeRoute(routeConfig RouteConfig) *route.RouteConfiguration {
 	return &route.RouteConfiguration{
-		Name: routeName,
-		VirtualHosts: []*route.VirtualHost{{
-			Name:    "local_service",
-			Domains: []string{"*"},
-			Routes: []*route.Route{{
-				Match: &route.RouteMatch{
-					PathSpecifier: &route.RouteMatch_Prefix{
-						Prefix: "/",
-					},
-				},
-				Action: &route.Route_Route{
-					Route: &route.RouteAction{
-						ClusterSpecifier: &route.RouteAction_Cluster{
-							Cluster: clusterName,
-						},
-						HostRewriteSpecifier: &route.RouteAction_HostRewriteLiteral{
-							HostRewriteLiteral: UpstreamHost,
-						},
-					},
-				},
-			}},
-		}},
+		Name:         routeConfig.Name,
+		VirtualHosts: makeVirtualHost(routeConfig.VirtualHosts),
 	}
 }
 
-func makeHTTPListener(listenerName string, route string) *listener.Listener {
+func makeVirtualHost(virtualHosts []VirtualHost) []*route.VirtualHost {
+	var result []*route.VirtualHost
+	for _, vh := range virtualHosts {
+		result = append(result, &route.VirtualHost{
+			Name:    vh.Name,
+			Domains: vh.Domains,
+			Routes:  makeRoutes(vh.Routes),
+		})
+	}
+
+	return result
+}
+
+func makeRoutes(routes []Route) []*route.Route {
+	var result []*route.Route
+	for _, r := range routes {
+		result = append(result, &route.Route{
+			Name: r.Name,
+			Match: &route.RouteMatch{
+				PathSpecifier: &route.RouteMatch_Prefix{
+					Prefix: r.Prefix,
+				},
+			},
+			Action: &route.Route_Route{
+				Route: &route.RouteAction{
+					ClusterSpecifier: &route.RouteAction_Cluster{
+						Cluster: r.Cluster.Name,
+					},
+					// HostRewriteSpecifier: &route.RouteAction_HostRewriteLiteral{
+					// 	HostRewriteLiteral: r.Cluster.Endpoints[0].UpstreamHost,
+					// },
+				},
+			},
+		})
+	}
+	return result
+}
+
+func makeHTTPListener(listenerName string, address string, port uint32, route string) *listener.Listener {
 	routerConfig, _ := anypb.New(&router.Router{})
 	// HTTP filter configuration
 	manager := &hcm.HttpConnectionManager{
@@ -133,9 +193,9 @@ func makeHTTPListener(listenerName string, route string) *listener.Listener {
 			Address: &core.Address_SocketAddress{
 				SocketAddress: &core.SocketAddress{
 					Protocol: core.SocketAddress_TCP,
-					Address:  "0.0.0.0",
+					Address:  address,
 					PortSpecifier: &core.SocketAddress_PortValue{
-						PortValue: ListenerPort,
+						PortValue: port,
 					},
 				},
 			},
@@ -169,12 +229,27 @@ func makeConfigSource() *core.ConfigSource {
 	return source
 }
 
-func GenerateSnapshot() *cache.Snapshot {
+func GenerateSnapshot(config Config) *cache.Snapshot {
+	var listeners []types.Resource
+	var clusters []types.Resource
+	var routes []types.Resource
+
+	for _, l := range config.Listeners {
+		listeners = append(listeners, makeHTTPListener(l.Name, l.Address, l.Port, l.RouteConfig.Name))
+		routes = append(routes, makeRoute(l.RouteConfig))
+
+		for _, vh := range l.RouteConfig.VirtualHosts {
+			for _, r := range vh.Routes {
+				clusters = append(clusters, makeCluster(r.Cluster))
+			}
+		}
+	}
+
 	snap, _ := cache.NewSnapshot("1",
 		map[resource.Type][]types.Resource{
-			resource.ClusterType:  {makeCluster(ClusterName)},
-			resource.RouteType:    {makeRoute(RouteName, ClusterName)},
-			resource.ListenerType: {makeHTTPListener(ListenerName, RouteName)},
+			resource.ClusterType:  clusters,
+			resource.RouteType:    routes,
+			resource.ListenerType: listeners,
 		},
 	)
 	return snap

@@ -18,10 +18,35 @@ import (
 
 func Test(t *testing.T) {
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	config := example.Config{
+		Listeners: []example.Listener{{
+			Name:    "listener_0",
+			Address: "0.0.0.0",
+			Port:    18000,
+			RouteConfig: example.RouteConfig{
+				Name: "route_config_0",
+				VirtualHosts: []example.VirtualHost{{
+					Name:    "virtual_host_0",
+					Domains: []string{"test"},
+					Routes: []example.Route{{
+						Name:   "route_0",
+						Prefix: "/",
+						Cluster: example.Cluster{
+							Name: "cluster_0",
+							Endpoints: []example.Endpoint{{
+								UpstreamHost: "jsonplaceholder.typicode.com",
+								UpstreamPort: 80,
+							}},
+						},
+					}},
+				}},
+			},
+		}},
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go example.Run(ctx, example.GenerateSnapshot())
+	go example.Run(ctx, example.GenerateSnapshot(config))
 
 	req, err := http.NewRequest("GET", "xds://test/todos/1", nil)
 	if err != nil {
