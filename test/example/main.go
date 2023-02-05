@@ -42,11 +42,28 @@ func init() {
 	flag.StringVar(&nodeID, "nodeID", "test-id", "Node ID")
 }
 
-func Run(ctx context.Context, snapshot *cache.Snapshot) {
-	flag.Parse()
+type MockServer struct {
+	cache  cache.SnapshotCache
+	server server.Server
+}
 
-	// Create a cache
+func New(ctx context.Context) *MockServer {
 	cache := cache.NewSnapshotCache(false, cache.IDHash{}, l)
+	callback := &test.Callbacks{Debug: l.Debug}
+	srv := server.NewServer(ctx, cache, callback)
+
+	return &MockServer{
+		cache:  cache,
+		server: srv,
+	}
+}
+
+func (m *MockServer) StartRunning(ctx context.Context) {
+	go RunServer(ctx, m.server, port)
+}
+
+func (m *MockServer) SetConfig(ctx context.Context, config Config) {
+	snapshot := GenerateSnapshot(config)
 
 	// Create the snapshot that we'll serve to Envoy
 	if err := snapshot.Consistent(); err != nil {
@@ -56,13 +73,8 @@ func Run(ctx context.Context, snapshot *cache.Snapshot) {
 	l.Debugf("will serve snapshot %+v", snapshot)
 
 	// Add the snapshot to the cache
-	if err := cache.SetSnapshot(context.Background(), nodeID, snapshot); err != nil {
+	if err := m.cache.SetSnapshot(ctx, nodeID, snapshot); err != nil {
 		l.Errorf("snapshot error %q for %+v", err, snapshot)
 		os.Exit(1)
 	}
-
-	// Run the xDS server
-	cb := &test.Callbacks{Debug: l.Debug}
-	srv := server.NewServer(ctx, cache, cb)
-	RunServer(ctx, srv, port)
 }

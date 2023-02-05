@@ -46,7 +46,9 @@ func Test(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go example.Run(ctx, example.GenerateSnapshot(config))
+	mockServer := example.New(context.Background())
+	mockServer.StartRunning(context.Background())
+	mockServer.SetConfig(ctx, config)
 
 	req, err := http.NewRequest("GET", "xds://test/todos/1", nil)
 	if err != nil {
