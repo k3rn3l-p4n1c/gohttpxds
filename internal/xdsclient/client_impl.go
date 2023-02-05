@@ -29,15 +29,15 @@ func New(config ServerConfig) (XDSClient, error) {
 	}
 
 	return &clientImpl{
-		conn:            conn,
-		serverConfig:    config,
-		done:            &event.Event{},
-		rdsClient:       rds.NewRouteDiscoveryServiceClient(conn),
-		ldsClient:       lds.NewListenerDiscoveryServiceClient(conn),
-		cdsClient:       cds.NewClusterDiscoveryServiceClient(conn),
-		listernersNames: make(map[string]struct{}),
-		clustersNames:   make(map[string]struct{}),
-		routesNames:     make(map[string]struct{}),
+		conn:           conn,
+		serverConfig:   config,
+		done:           &event.Event{},
+		rdsClient:      rds.NewRouteDiscoveryServiceClient(conn),
+		ldsClient:      lds.NewListenerDiscoveryServiceClient(conn),
+		cdsClient:      cds.NewClusterDiscoveryServiceClient(conn),
+		listenersNames: make(map[string]struct{}),
+		clustersNames:  make(map[string]struct{}),
+		routesNames:    make(map[string]struct{}),
 	}, nil
 }
 
@@ -50,24 +50,24 @@ type clientImpl struct {
 	ldsClient     lds.ListenerDiscoveryServiceClient
 	cdsClient     cds.ClusterDiscoveryServiceClient
 
-	listernersNames map[string]struct{}
-	clustersNames   map[string]struct{}
-	routesNames     map[string]struct{}
+	listenersNames map[string]struct{}
+	clustersNames  map[string]struct{}
+	routesNames    map[string]struct{}
 }
 
 func (c *clientImpl) addListener(resourceName string) {
 	if resourceName == "" {
 		return
 	}
-	_, exists := c.listernersNames[resourceName]
+	_, exists := c.listenersNames[resourceName]
 	if !exists {
-		c.listernersNames[resourceName] = struct{}{}
+		c.listenersNames[resourceName] = struct{}{}
 	}
 }
 
 func (c *clientImpl) GetListeners() []string {
-	listeners := make([]string, 0, len(c.listernersNames))
-	for k := range c.listernersNames {
+	listeners := make([]string, 0, len(c.listenersNames))
+	for k := range c.listenersNames {
 		listeners = append(listeners, k)
 	}
 	return listeners
