@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"github.com/k3rn3l-p4n1c/gohttpxds"
-	"github.com/k3rn3l-p4n1c/gohttpxds/test/example"
+	"github.com/k3rn3l-p4n1c/gohttpxds/pkg/mockserver"
+
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
@@ -15,23 +16,25 @@ import (
 )
 
 func Test(t *testing.T) {
+	nodeId := "testNode"
+
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	config := example.Config{
-		Listeners: []example.Listener{{
+	config := mockserver.Config{
+		Listeners: []mockserver.Listener{{
 			Name:    "listener_0",
 			Address: "0.0.0.0",
 			Port:    18000,
-			RouteConfig: example.RouteConfig{
+			RouteConfig: mockserver.RouteConfig{
 				Name: "route_config_0",
-				VirtualHosts: []example.VirtualHost{{
+				VirtualHosts: []mockserver.VirtualHost{{
 					Name:    "virtual_host_0",
 					Domains: []string{"test"},
-					Routes: []example.Route{{
+					Routes: []mockserver.Route{{
 						Name:   "route_0",
 						Prefix: "/",
-						Cluster: example.Cluster{
+						Cluster: mockserver.Cluster{
 							Name: "cluster_0",
-							Endpoints: []example.Endpoint{{
+							Endpoints: []mockserver.Endpoint{{
 								UpstreamHost: "jsonplaceholder.typicode.com",
 								UpstreamPort: 80,
 							}},
@@ -44,35 +47,30 @@ func Test(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	mockServer := example.New(context.Background())
+	mockServer := mockserver.New(context.Background(), nodeId, 18000)
 	mockServer.StartRunning(context.Background())
 
-	req, err := http.NewRequest("GET", "xds://test/todos/1", nil)
-	if err != nil {
+	gohttpxds.Register("127.0.0.1:18000", grpc.WithTransportCredentials(insecure.NewCredentials()), nodeId)
+
+	if resp, err := http.Get("xds://test/todos/1"); err != nil {
 		panic(err.Error())
+	} else {
+		assert.Equal(t, 404, resp.StatusCode)
 	}
-
-	client, err := gohttpxds.NewHttpClient("127.0.0.1:18000", grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		panic(err.Error())
-	}
-
-	// client := &http.Client{}
-
-	time.Sleep(1 * time.Second)
-
-	resp, err := client.Do(req)
-	if err != nil {
-		panic(err.Error())
-	}
-	assert.Equal(t, 404, resp.StatusCode)
 
 	mockServer.SetConfig(ctx, config)
 	time.Sleep(1 * time.Second)
-	resp, err = client.Do(req)
-	if err != nil {
+
+	if resp, err := http.Get("xds://test2/todos/1"); err != nil {
 		panic(err.Error())
+	} else {
+		assert.Equal(t, 404, resp.StatusCode)
 	}
-	assert.Equal(t, 200, resp.StatusCode)
+
+	if resp, err := http.Get("xds://test/todos/1"); err != nil {
+		panic(err.Error())
+	} else {
+		assert.Equal(t, 200, resp.StatusCode)
+	}
 
 }

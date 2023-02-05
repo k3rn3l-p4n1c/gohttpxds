@@ -18,6 +18,8 @@ type ServerConfig struct {
 	// Creds contains the credentials to be used while talking to the xDS
 	// server, as a grpc.DialOption.
 	Creds grpc.DialOption
+
+	NodeId string
 }
 
 type XDSClient interface {

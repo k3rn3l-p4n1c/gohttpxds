@@ -131,7 +131,7 @@ func (c *clientImpl) WatchListener(resourceName string, callback func([]*listene
 		callback(listeners, nil)
 	}
 
-	return watchResources(c.GetListeners, streamClient, genericCallback)
+	return c.watchResources(c.GetListeners, streamClient, genericCallback)
 }
 
 func (c *clientImpl) WatchRouteConfig(resourceName string, callback func([]*route.RouteConfiguration, error)) func() {
@@ -155,7 +155,7 @@ func (c *clientImpl) WatchRouteConfig(resourceName string, callback func([]*rout
 		callback(routeConfigs, nil)
 	}
 
-	return watchResources(c.GetRoutes, streamClient, genericCallback)
+	return c.watchResources(c.GetRoutes, streamClient, genericCallback)
 }
 
 func (c *clientImpl) WatchCluster(resourceName string, callback func([]*cluster.Cluster, error)) func() {
@@ -179,7 +179,7 @@ func (c *clientImpl) WatchCluster(resourceName string, callback func([]*cluster.
 		callback(clusters, nil)
 	}
 
-	return watchResources(c.GetClusters, streamClient, genericCallback)
+	return c.watchResources(c.GetClusters, streamClient, genericCallback)
 
 }
 
@@ -189,14 +189,14 @@ type streamClient interface {
 	grpc.ClientStream
 }
 
-func watchResources(getResourceNames func() []string, sc streamClient, callback func([]*any.Any, error)) func() {
+func (c *clientImpl) watchResources(getResourceNames func() []string, sc streamClient, callback func([]*any.Any, error)) func() {
 	var cancel chan struct{}
 
 	go func() {
 		for {
 			req := &xds.DiscoveryRequest{
 				Node: &xdsCore.Node{
-					Id: "test-id",
+					Id: c.serverConfig.NodeId,
 				},
 				ResourceNames: getResourceNames(),
 				VersionInfo:   "2",
