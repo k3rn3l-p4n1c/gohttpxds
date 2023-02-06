@@ -19,7 +19,7 @@ func (w *Wrapper) getFirstMatchedRoute(req *http.Request) *route.Route {
 			}
 
 			for _, route := range vh.Routes {
-				if doesMatchRoutes(req, route) {
+				if doesMatchRoutes(req, route.GetMatch()) {
 					return route
 				}
 			}
@@ -27,10 +27,6 @@ func (w *Wrapper) getFirstMatchedRoute(req *http.Request) *route.Route {
 	}
 
 	return nil
-}
-
-func doesMatchRoutes(req *http.Request, route *route.Route) bool {
-	return true // todo
 }
 
 func doesMatchVirtualHost(req *http.Request, virtualHost *route.VirtualHost) bool {
