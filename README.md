@@ -1,6 +1,6 @@
 # gohttpxds
 
-An Http Client for Go that support xDS. This project is inspired by xDS implementation in gRPC and enable proxyless service mesh with Istio and TrafficDirector.
+An HTTP Client for Go that supports xDS. This project is inspired by xDS implementation in gRPC and enables proxyless service mesh with Istio and TrafficDirector.
 
 ## Why gohttpxds?
 
