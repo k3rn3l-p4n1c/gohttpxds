@@ -45,7 +45,8 @@ func (w *Wrapper) RoundTrip(req *http.Request) (*http.Response, error) {
 	req = w.doAction(req, route)
 
 	logRequest(req)
-	return w.transport.RoundTrip(req)
+	
+	return roundTripWithRetry(req, w.transport.RoundTrip, route.GetRoute().GetRetryPolicy())
 }
 
 func (w *Wrapper) doAction(req *http.Request, r *route.Route) *http.Request {
