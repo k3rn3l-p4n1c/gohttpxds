@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 )
 
 const (
@@ -26,7 +26,7 @@ func init() {
 	random = rand.New(source)
 }
 
-func roundTripWithRetry(req *http.Request, roundTrip func(*http.Request) (*http.Response, error), retryPolicy *route.RetryPolicy) (*http.Response, error) {
+func roundTripWithRetry(req *http.Request, roundTrip func(*http.Request) (*http.Response, error), retryPolicy *routev3.RetryPolicy) (*http.Response, error) {
 	for retryNum := 1; ; retryNum++ {
 		resp, err := roundTrip(req)
 
@@ -43,7 +43,7 @@ func roundTripWithRetry(req *http.Request, roundTrip func(*http.Request) (*http.
 
 }
 
-func shouldRetry(req *http.Request, resp *http.Response, responseError error, retryPolicy *route.RetryPolicy) bool {
+func shouldRetry(req *http.Request, resp *http.Response, responseError error, retryPolicy *routev3.RetryPolicy) bool {
 	if contains(retryPolicy.GetRetriableStatusCodes(), resp.StatusCode) {
 		return true
 	}
@@ -104,7 +104,7 @@ func contains(s []uint32, e int) bool {
 	return false
 }
 
-func backoff(retryNum int, retryBackOff *route.RetryPolicy_RetryBackOff) {
+func backoff(retryNum int, retryBackOff *routev3.RetryPolicy_RetryBackOff) {
 	var baseIntervalMiliseconds = BaseIntervalMiliseconds
 	if retryBackOff.GetBaseInterval() != nil {
 		baseIntervalMiliseconds = retryBackOff.GetBaseInterval().AsDuration().Milliseconds()

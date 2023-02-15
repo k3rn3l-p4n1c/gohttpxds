@@ -6,19 +6,19 @@ import (
 	"log"
 	"sync"
 
-	xdsCore "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	cds "github.com/envoyproxy/go-control-plane/envoy/service/cluster/v3"
-	xds "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
-	lds "github.com/envoyproxy/go-control-plane/envoy/service/listener/v3"
-	rds "github.com/envoyproxy/go-control-plane/envoy/service/route/v3"
+	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	cdsv3 "github.com/envoyproxy/go-control-plane/envoy/service/cluster/v3"
+	xdsv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+	ldsv3 "github.com/envoyproxy/go-control-plane/envoy/service/listener/v3"
+	rdsv3 "github.com/envoyproxy/go-control-plane/envoy/service/route/v3"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/any"
 	"google.golang.org/grpc"
 
-	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
-	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
-	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
-	xdsresource "github.com/k3rn3l-p4n1c/gohttpxds/internal/xdsclient/resource"
+	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	resourcev3 "github.com/k3rn3l-p4n1c/gohttpxds/internal/xdsclient/resource"
 	"github.com/k3rn3l-p4n1c/gohttpxds/pkg/event"
 )
 
@@ -32,9 +32,9 @@ func New(config ServerConfig) (XDSClient, error) {
 		conn:           conn,
 		serverConfig:   config,
 		done:           &event.Event{},
-		rdsClient:      rds.NewRouteDiscoveryServiceClient(conn),
-		ldsClient:      lds.NewListenerDiscoveryServiceClient(conn),
-		cdsClient:      cds.NewClusterDiscoveryServiceClient(conn),
+		rdsClient:      rdsv3.NewRouteDiscoveryServiceClient(conn),
+		ldsClient:      ldsv3.NewListenerDiscoveryServiceClient(conn),
+		cdsClient:      cdsv3.NewClusterDiscoveryServiceClient(conn),
 		listenersNames: make(map[string]struct{}),
 		clustersNames:  make(map[string]struct{}),
 		routesNames:    make(map[string]struct{}),
@@ -46,9 +46,9 @@ type clientImpl struct {
 	conn          *grpc.ClientConn
 	done          *event.Event
 	resourceTypes resourceTypeRegistry
-	rdsClient     rds.RouteDiscoveryServiceClient
-	ldsClient     lds.ListenerDiscoveryServiceClient
-	cdsClient     cds.ClusterDiscoveryServiceClient
+	rdsClient     rdsv3.RouteDiscoveryServiceClient
+	ldsClient     ldsv3.ListenerDiscoveryServiceClient
+	cdsClient     cdsv3.ClusterDiscoveryServiceClient
 
 	listenersNames map[string]struct{}
 	clustersNames  map[string]struct{}
@@ -109,7 +109,7 @@ func (c *clientImpl) GetRoutes() []string {
 	return routes
 }
 
-func (c *clientImpl) WatchListener(resourceName string, callback func([]*listener.Listener, error)) func() {
+func (c *clientImpl) WatchListener(resourceName string, callback func([]*listenerv3.Listener, error)) func() {
 	c.addListener(resourceName)
 	streamClient, err := c.ldsClient.StreamListeners(context.TODO())
 	if err != nil {
@@ -120,9 +120,9 @@ func (c *clientImpl) WatchListener(resourceName string, callback func([]*listene
 			callback(nil, err)
 			return
 		}
-		listeners := make([]*listener.Listener, len(resources))
+		listeners := make([]*listenerv3.Listener, len(resources))
 		for i := range resources {
-			l := &listener.Listener{}
+			l := &listenerv3.Listener{}
 			if err := proto.Unmarshal(resources[i].GetValue(), l); err != nil {
 				panic(fmt.Errorf("failed to unmarshal resource: %w", err).Error())
 			}
@@ -134,7 +134,7 @@ func (c *clientImpl) WatchListener(resourceName string, callback func([]*listene
 	return c.watchResources(c.GetListeners, streamClient, genericCallback)
 }
 
-func (c *clientImpl) WatchRouteConfig(resourceName string, callback func([]*route.RouteConfiguration, error)) func() {
+func (c *clientImpl) WatchRouteConfig(resourceName string, callback func([]*routev3.RouteConfiguration, error)) func() {
 	streamClient, err := c.rdsClient.StreamRoutes(context.TODO())
 	if err != nil {
 		panic(fmt.Errorf("failed to stream: %w", err).Error())
@@ -144,9 +144,9 @@ func (c *clientImpl) WatchRouteConfig(resourceName string, callback func([]*rout
 			callback(nil, err)
 			return
 		}
-		routeConfigs := make([]*route.RouteConfiguration, len(resources))
+		routeConfigs := make([]*routev3.RouteConfiguration, len(resources))
 		for i := range resources {
-			rc := &route.RouteConfiguration{}
+			rc := &routev3.RouteConfiguration{}
 			if err := proto.Unmarshal(resources[i].GetValue(), rc); err != nil {
 				panic(fmt.Errorf("failed to unmarshal resource: %w", err).Error())
 			}
@@ -158,7 +158,7 @@ func (c *clientImpl) WatchRouteConfig(resourceName string, callback func([]*rout
 	return c.watchResources(c.GetRoutes, streamClient, genericCallback)
 }
 
-func (c *clientImpl) WatchCluster(resourceName string, callback func([]*cluster.Cluster, error)) func() {
+func (c *clientImpl) WatchCluster(resourceName string, callback func([]*clusterv3.Cluster, error)) func() {
 	streamClient, err := c.cdsClient.StreamClusters(context.TODO())
 	if err != nil {
 		panic(fmt.Errorf("failed to stream: %w", err).Error())
@@ -168,9 +168,9 @@ func (c *clientImpl) WatchCluster(resourceName string, callback func([]*cluster.
 			callback(nil, err)
 			return
 		}
-		clusters := make([]*cluster.Cluster, len(resources))
+		clusters := make([]*clusterv3.Cluster, len(resources))
 		for i := range resources {
-			c := &cluster.Cluster{}
+			c := &clusterv3.Cluster{}
 			if err := proto.Unmarshal(resources[i].GetValue(), c); err != nil {
 				panic(fmt.Errorf("failed to unmarshal resource: %w", err).Error())
 			}
@@ -184,8 +184,8 @@ func (c *clientImpl) WatchCluster(resourceName string, callback func([]*cluster.
 }
 
 type streamClient interface {
-	Send(*xds.DiscoveryRequest) error
-	Recv() (*xds.DiscoveryResponse, error)
+	Send(*xdsv3.DiscoveryRequest) error
+	Recv() (*xdsv3.DiscoveryResponse, error)
 	grpc.ClientStream
 }
 
@@ -194,8 +194,8 @@ func (c *clientImpl) watchResources(getResourceNames func() []string, sc streamC
 
 	go func() {
 		for {
-			req := &xds.DiscoveryRequest{
-				Node: &xdsCore.Node{
+			req := &xdsv3.DiscoveryRequest{
+				Node: &corev3.Node{
 					Id: c.serverConfig.NodeId,
 				},
 				ResourceNames: getResourceNames(),
@@ -234,20 +234,20 @@ func (c *clientImpl) Close() {
 // for a resource of that type is invoked.
 type resourceTypeRegistry struct {
 	mu    sync.Mutex
-	types map[string]xdsresource.Type
+	types map[string]resourcev3.Type
 }
 
 func newResourceTypeRegistry() *resourceTypeRegistry {
-	return &resourceTypeRegistry{types: make(map[string]xdsresource.Type)}
+	return &resourceTypeRegistry{types: make(map[string]resourcev3.Type)}
 }
 
-func (r *resourceTypeRegistry) get(url string) xdsresource.Type {
+func (r *resourceTypeRegistry) get(url string) resourcev3.Type {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.types[url]
 }
 
-func (r *resourceTypeRegistry) maybeRegister(rType xdsresource.Type) error {
+func (r *resourceTypeRegistry) maybeRegister(rType resourcev3.Type) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

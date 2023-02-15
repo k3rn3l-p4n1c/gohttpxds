@@ -21,13 +21,13 @@ import (
 	"net"
 	"time"
 
-	clusterservice "github.com/envoyproxy/go-control-plane/envoy/service/cluster/v3"
-	discoverygrpc "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
-	endpointservice "github.com/envoyproxy/go-control-plane/envoy/service/endpoint/v3"
-	listenerservice "github.com/envoyproxy/go-control-plane/envoy/service/listener/v3"
-	routeservice "github.com/envoyproxy/go-control-plane/envoy/service/route/v3"
-	runtimeservice "github.com/envoyproxy/go-control-plane/envoy/service/runtime/v3"
-	secretservice "github.com/envoyproxy/go-control-plane/envoy/service/secret/v3"
+	cdsv3 "github.com/envoyproxy/go-control-plane/envoy/service/cluster/v3"
+	adsv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+	edsv3 "github.com/envoyproxy/go-control-plane/envoy/service/endpoint/v3"
+	ldsv3 "github.com/envoyproxy/go-control-plane/envoy/service/listener/v3"
+	rdsv3 "github.com/envoyproxy/go-control-plane/envoy/service/route/v3"
+	rtdsv3 "github.com/envoyproxy/go-control-plane/envoy/service/runtime/v3"
+	sdsv3 "github.com/envoyproxy/go-control-plane/envoy/service/secret/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/server/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
@@ -42,13 +42,13 @@ const (
 
 func registerServer(grpcServer *grpc.Server, server server.Server) {
 	// register services
-	discoverygrpc.RegisterAggregatedDiscoveryServiceServer(grpcServer, server)
-	endpointservice.RegisterEndpointDiscoveryServiceServer(grpcServer, server)
-	clusterservice.RegisterClusterDiscoveryServiceServer(grpcServer, server)
-	routeservice.RegisterRouteDiscoveryServiceServer(grpcServer, server)
-	listenerservice.RegisterListenerDiscoveryServiceServer(grpcServer, server)
-	secretservice.RegisterSecretDiscoveryServiceServer(grpcServer, server)
-	runtimeservice.RegisterRuntimeDiscoveryServiceServer(grpcServer, server)
+	adsv3.RegisterAggregatedDiscoveryServiceServer(grpcServer, server)
+	edsv3.RegisterEndpointDiscoveryServiceServer(grpcServer, server)
+	cdsv3.RegisterClusterDiscoveryServiceServer(grpcServer, server)
+	rdsv3.RegisterRouteDiscoveryServiceServer(grpcServer, server)
+	ldsv3.RegisterListenerDiscoveryServiceServer(grpcServer, server)
+	sdsv3.RegisterSecretDiscoveryServiceServer(grpcServer, server)
+	rtdsv3.RegisterRuntimeDiscoveryServiceServer(grpcServer, server)
 }
 
 // RunServer starts an xDS server at the given port.

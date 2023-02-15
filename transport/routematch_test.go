@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"testing"
 
-	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
-	matcher "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
+	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,8 +16,8 @@ func TestDoesPathMatch_Prefix_ShouldPass(t *testing.T) {
 		log.Fatal(err.Error())
 	}
 
-	routeMatch := &route.RouteMatch{
-		PathSpecifier: &route.RouteMatch_Prefix{
+	routeMatch := &routev3.RouteMatch{
+		PathSpecifier: &routev3.RouteMatch_Prefix{
 			Prefix: "/prefix",
 		},
 	}
@@ -31,8 +31,8 @@ func TestDoesPathMatch_WrongPrefix_ShouldFail(t *testing.T) {
 		log.Fatal(err.Error())
 	}
 
-	routeMatch := &route.RouteMatch{
-		PathSpecifier: &route.RouteMatch_Prefix{
+	routeMatch := &routev3.RouteMatch{
+		PathSpecifier: &routev3.RouteMatch_Prefix{
 			Prefix: "/prefix2",
 		},
 	}
@@ -46,8 +46,8 @@ func TestDoesPathMatch_Exact_ShouldPass(t *testing.T) {
 		log.Fatal(err.Error())
 	}
 
-	routeMatch := &route.RouteMatch{
-		PathSpecifier: &route.RouteMatch_Path{
+	routeMatch := &routev3.RouteMatch{
+		PathSpecifier: &routev3.RouteMatch_Path{
 			Path: "/prefix/url",
 		},
 	}
@@ -61,8 +61,8 @@ func TestDoesPathMatch_Exact_ShouldFail(t *testing.T) {
 		log.Fatal(err.Error())
 	}
 
-	routeMatch := &route.RouteMatch{
-		PathSpecifier: &route.RouteMatch_Path{
+	routeMatch := &routev3.RouteMatch{
+		PathSpecifier: &routev3.RouteMatch_Path{
 			Path: "/prefix/urll",
 		},
 	}
@@ -76,9 +76,9 @@ func TestDoesPathMatch_Regex_ShouldPass(t *testing.T) {
 		log.Fatal(err.Error())
 	}
 
-	routeMatch := &route.RouteMatch{
-		PathSpecifier: &route.RouteMatch_SafeRegex{
-			SafeRegex: &matcher.RegexMatcher{
+	routeMatch := &routev3.RouteMatch{
+		PathSpecifier: &routev3.RouteMatch_SafeRegex{
+			SafeRegex: &matcherv3.RegexMatcher{
 				Regex: `.*url\d+$`,
 			},
 		},
@@ -93,18 +93,18 @@ func TestDoesQueryParametersMatch_Present_ShouldPass(t *testing.T) {
 		log.Fatal(err.Error())
 	}
 
-	queryParameters := []*route.QueryParameterMatcher{
+	queryParameters := []*routev3.QueryParameterMatcher{
 		{
 			Name: "q1",
-			QueryParameterMatchSpecifier: &route.QueryParameterMatcher_PresentMatch{
+			QueryParameterMatchSpecifier: &routev3.QueryParameterMatcher_PresentMatch{
 				PresentMatch: true,
 			},
 		},
 		{
 			Name: "q2",
-			QueryParameterMatchSpecifier: &route.QueryParameterMatcher_StringMatch{
-				StringMatch: &matcher.StringMatcher{
-					MatchPattern: &matcher.StringMatcher_Exact{
+			QueryParameterMatchSpecifier: &routev3.QueryParameterMatcher_StringMatch{
+				StringMatch: &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_Exact{
 						Exact: "3",
 					},
 				},
@@ -121,18 +121,18 @@ func TestDoesQueryParametersMatch_Present_ShouldFail(t *testing.T) {
 		log.Fatal(err.Error())
 	}
 
-	queryParameters := []*route.QueryParameterMatcher{
+	queryParameters := []*routev3.QueryParameterMatcher{
 		{
 			Name: "q1",
-			QueryParameterMatchSpecifier: &route.QueryParameterMatcher_PresentMatch{
+			QueryParameterMatchSpecifier: &routev3.QueryParameterMatcher_PresentMatch{
 				PresentMatch: false,
 			},
 		},
 		{
 			Name: "q2",
-			QueryParameterMatchSpecifier: &route.QueryParameterMatcher_StringMatch{
-				StringMatch: &matcher.StringMatcher{
-					MatchPattern: &matcher.StringMatcher_Exact{
+			QueryParameterMatchSpecifier: &routev3.QueryParameterMatcher_StringMatch{
+				StringMatch: &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_Exact{
 						Exact: "3",
 					},
 				},

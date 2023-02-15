@@ -1,9 +1,9 @@
 package xdsclient
 
 import (
-	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
-	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
-	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	"google.golang.org/grpc"
 )
 
@@ -23,9 +23,9 @@ type ServerConfig struct {
 }
 
 type XDSClient interface {
-	WatchListener(string, func([]*listener.Listener, error)) func()
-	WatchRouteConfig(string, func([]*route.RouteConfiguration, error)) func()
-	WatchCluster(string, func([]*cluster.Cluster, error)) func()
+	WatchListener(string, func([]*listenerv3.Listener, error)) func()
+	WatchRouteConfig(string, func([]*routev3.RouteConfiguration, error)) func()
+	WatchCluster(string, func([]*clusterv3.Cluster, error)) func()
 
 	Close()
 }
