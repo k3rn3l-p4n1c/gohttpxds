@@ -14,7 +14,7 @@ func (w *Wrapper) doRouteAction(req *http.Request, ra *routev3.RouteAction) *htt
 		panic(fmt.Errorf("fail to find cluster: %w", err))
 	}
 
-	add := chooseEndpoint(cluster[0]).Address.Address.(*corev3.Address_SocketAddress).SocketAddress
+	add := chooseEndpoint(cluster[0], WEIGHTED_LOAD_BALANCING_ALGORITHM).Address.Address.(*corev3.Address_SocketAddress).SocketAddress
 	host := add.Address
 	port := add.PortSpecifier.(*corev3.SocketAddress_PortValue).PortValue
 	req.URL.Host = fmt.Sprintf("%s:%d", host, port)
